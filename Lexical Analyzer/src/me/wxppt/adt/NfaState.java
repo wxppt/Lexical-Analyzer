@@ -1,15 +1,15 @@
 package me.wxppt.adt;
 
+import java.util.ArrayList;
+
 
 public class NfaState {
+	private ArrayList<Integer> addToAlready = new ArrayList<Integer>();
 	public static int STATE_INDEX = 0;
 	
 	public int no;
-	public enum Property {
-		START,NORMAL,END
-	}
 
-	public Property property;
+	public StateProperty property;
 	public ReItem[] edge = new ReItem[100];
 	public NfaState[] next = new NfaState[100];
 
@@ -23,31 +23,48 @@ public class NfaState {
 	public void link(ReItem edge, NfaState nextState) {
 		this.edge[edgeCnt] = edge;
 		if(nextState.edgeCnt != 0) {
-			nextState.property = NfaState.Property.NORMAL;
+			nextState.property = StateProperty.NORMAL;
 		}
 		this.next[edgeCnt] = nextState;
 		this.edgeCnt++;
 	}
 	
 	public void addToEnd(ReItem edge, NfaState nextState) {
-		if(this.property == NfaState.Property.END) {
-			this.property = NfaState.Property.NORMAL;
+		addToAlready.clear();
+		addToEndEx(edge, nextState);
+	}
+	
+	private void addToEndEx(ReItem edge, NfaState nextState) {
+		if(addToAlready.contains(nextState.no)) {
+			return;
+		}
+		addToAlready.add(nextState.no);
+		
+		if(this.property == StateProperty.END) {
+			this.property = StateProperty.NORMAL;
 			if(nextState.edgeCnt != 0) {
-				nextState.property = NfaState.Property.NORMAL;
+				nextState.property = StateProperty.NORMAL;
 			}
 			this.link(edge, nextState);
 			return;
 		} else {
-			this.next[0].addToEnd(edge,nextState);
+			for(int i = 0; i< edgeCnt;i++) {
+				this.next[i].addToEndEx(edge,nextState);
+			}
 		}
 	}
 	
+	
 	public void cycling(NfaState start) {
-		if(this.property == NfaState.Property.END) {
+		if(this.property == StateProperty.END) {
 			this.link(ReItem.getEmptyElement(), start);
 			return;
 		} else {
 			this.next[0].cycling(start);
 		}
+	}
+	
+	public static void RESET() {
+		STATE_INDEX = 0;
 	}
 }

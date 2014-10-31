@@ -3,8 +3,10 @@ package me.wxppt;
 import java.util.ArrayList;
 import java.util.Stack;
 
+import me.wxppt.adt.DfaState;
 import me.wxppt.adt.NfaState;
 import me.wxppt.adt.ReItem;
+import me.wxppt.logic.DfaLogic;
 import me.wxppt.logic.IOLogic;
 import me.wxppt.logic.NfaLogic;
 
@@ -12,10 +14,18 @@ public class Launcher {
 	public static void main(String[] args) {
 		IOLogic io = new IOLogic();
 		String input = io.keyboardInput();
+		System.out.println("---------------");
 		ArrayList<ReItem> reItems = preprocessing(input);
 		ArrayList<ReItem> postReItems = infixToPostfix(reItems);
-		NfaState nfa = NfaLogic.create(postReItems);
-		NfaLogic.print(nfa);
+		System.out.println("---------------");
+		NfaLogic nfaLogic = new NfaLogic();
+		NfaState nfa = nfaLogic.create(postReItems);
+		nfaLogic.print(nfa);
+		System.out.println("---------------");
+		DfaLogic dfaLogic = new DfaLogic();
+		DfaState dfa = dfaLogic.nfaToDfa(nfa);
+		dfaLogic.check(dfa);
+		dfaLogic.print(dfa);
 	}
 
 	public static ArrayList<ReItem> preprocessing(String input) {
@@ -47,6 +57,21 @@ public class Launcher {
 				}
 				if (reItems.get(i).equals(new ReItem(')', false))
 						&& reItems.get(i + 1).equals(new ReItem('(', false))) {
+					reItems.add(i + 1, new ReItem('.', false));
+					i++;
+				}
+				if (reItems.get(i).equals(new ReItem('*', false))
+						&& reItems.get(i + 1).equals(new ReItem('(', false))) {
+					reItems.add(i + 1, new ReItem('.', false));
+					i++;
+				}
+				if (reItems.get(i).equals(new ReItem(')', false))
+						&& reItems.get(i + 1).isChar()) {
+					reItems.add(i + 1, new ReItem('.', false));
+					i++;
+				}
+				if (reItems.get(i).equals(new ReItem('*', false))
+						&& reItems.get(i + 1).isChar()) {
 					reItems.add(i + 1, new ReItem('.', false));
 					i++;
 				}

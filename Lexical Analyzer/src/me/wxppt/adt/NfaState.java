@@ -10,17 +10,20 @@ public class NfaState {
 	public int no;
 
 	public StateProperty property;
-	public ReItem[] edge = new ReItem[100];
-	public NfaState[] next = new NfaState[100];
+	public ReElement[] edge = new ReElement[50];
+	public NfaState[] next = new NfaState[50];
 
 	public int edgeCnt = 0;
+	
+	public String returnMessage = "";
+	public int priority = -1;
 	
 	public NfaState() {
 		no = STATE_INDEX;
 		STATE_INDEX++;
 	}
 	
-	public void link(ReItem edge, NfaState nextState) {
+	public void link(ReElement edge, NfaState nextState) {
 		this.edge[edgeCnt] = edge;
 		if(nextState.edgeCnt != 0) {
 			nextState.property = StateProperty.NORMAL;
@@ -29,12 +32,12 @@ public class NfaState {
 		this.edgeCnt++;
 	}
 	
-	public void addToEnd(ReItem edge, NfaState nextState) {
+	public void addToEnd(ReElement edge, NfaState nextState) {
 		addToAlready.clear();
 		addToEndEx(edge, nextState);
 	}
 	
-	private void addToEndEx(ReItem edge, NfaState nextState) {
+	private void addToEndEx(ReElement edge, NfaState nextState) {
 		if(addToAlready.contains(nextState.no)) {
 			return;
 		}
@@ -54,17 +57,48 @@ public class NfaState {
 		}
 	}
 	
-	
 	public void cycling(NfaState start) {
+		addToAlready.clear();
+		cyclingEx(start);
+	}
+	
+	public void cyclingEx(NfaState start) {
+		if(addToAlready.contains(start.no)) {
+			return;
+		}
+		addToAlready.add(start.no);
 		if(this.property == StateProperty.END) {
-			this.link(ReItem.getEmptyElement(), start);
+			this.link(ReElement.getEmptyElement(), start);
 			return;
 		} else {
-			this.next[0].cycling(start);
+			for(int i = 0; i< edgeCnt;i++) {
+				this.next[i].cyclingEx(start);
+			}
 		}
 	}
 	
 	public static void RESET() {
 		STATE_INDEX = 0;
+	}
+	
+	public void setReturnInfo(String s, int priority) {
+		addToAlready.clear();
+		setReturnMessageEx(s,priority,this);
+	}
+	
+	public void setReturnMessageEx(String s, int priority, NfaState nextState) {
+		if(addToAlready.contains(nextState.no)) {
+			return;
+		}
+		addToAlready.add(nextState.no);
+		
+		if(this.property == StateProperty.END) {
+			this.returnMessage = s;
+			this.priority = priority;
+		} else {
+			for(int i = 0; i< edgeCnt;i++) {
+				this.next[i].setReturnMessageEx(s, priority,nextState);
+			}
+		}
 	}
 }

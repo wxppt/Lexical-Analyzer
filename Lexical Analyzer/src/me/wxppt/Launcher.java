@@ -1,130 +1,130 @@
 package me.wxppt;
 
 import java.util.ArrayList;
-import java.util.Stack;
 
 import me.wxppt.adt.DfaState;
 import me.wxppt.adt.NfaState;
-import me.wxppt.adt.ReItem;
+import me.wxppt.adt.ReElement;
+import me.wxppt.adt.Regular;
+import me.wxppt.adt.SearchTable;
+import me.wxppt.adt.StateProperty;
 import me.wxppt.logic.DfaLogic;
 import me.wxppt.logic.IOLogic;
 import me.wxppt.logic.NfaLogic;
+import me.wxppt.logic.ReLogic;
 
 public class Launcher {
 	public static void main(String[] args) {
-		IOLogic io = new IOLogic();
-		String input = io.keyboardInput();
+		ReLogic reLogic = new ReLogic();
+		ArrayList<Regular> res = reLogic.readRe("java.re");
 		System.out.println("---------------");
-		ArrayList<ReItem> reItems = preprocessing(input);
-		ArrayList<ReItem> postReItems = infixToPostfix(reItems);
-		System.out.println("---------------");
+		NfaState start = new NfaState();
+		start.property = StateProperty.START;
 		NfaLogic nfaLogic = new NfaLogic();
-		NfaState nfa = nfaLogic.create(postReItems);
-		nfaLogic.print(nfa);
+		for (Regular re : res) {
+			ArrayList<ReElement> reItems = reLogic.preprocessing(re.regular);
+			ArrayList<ReElement> postReItems = reLogic.infixToPostfix(reItems);
+			NfaState nfa = nfaLogic.create(postReItems);
+			nfa.setReturnInfo(re.type, re.priority);
+			nfaLogic.print(nfa);
+			start.link(ReElement.getEmptyElement(), nfa);
+		}
+		nfaLogic.print(start);
 		System.out.println("---------------");
 		DfaLogic dfaLogic = new DfaLogic();
-		DfaState dfa = dfaLogic.nfaToDfa(nfa);
+		DfaState dfa = dfaLogic.nfaToDfa(start);
 		dfaLogic.check(dfa);
 		dfaLogic.print(dfa);
-	}
-
-	public static ArrayList<ReItem> preprocessing(String input) {
-		char[] re = input.toCharArray();
-		ArrayList<ReItem> reItems = new ArrayList<ReItem>();
-
-		// 把转义字符放在一起
-		try {
-			for (int i = 0; i < re.length; i++) {
-				// 检测是否是转义
-				if (re[i] != '\\') {
-					reItems.add(new ReItem(re[i], false));
-				} else {
-					reItems.add(new ReItem(re[i + 1], true));
-					i++;
-				}
-			}
-		} catch (Exception e) { // 数组越界或字符错误
-			e.printStackTrace();
-			System.out.println("ERROR RE: " + input);
+		dfaLogic.constructSearchTable(dfa);
+		System.out.println("---------------");
+		IOLogic ioLogic = new IOLogic();
+		String sourceCode = ioLogic.fileInput("SourceCode.java");
+		char[] srcArr = sourceCode.toCharArray();
+		srcArr = preprocess(srcArr);
+		scan(srcArr, 0);
+		for(int i = 0; i < tokenTable.size();i++) {
+			System.out.println(tokenTable.get(i));
 		}
-
-		// 加点
-		try {
-			for (int i = 0; i < reItems.size() - 1; i++) {
-				if (reItems.get(i).isChar() && reItems.get(i + 1).isChar()) {
-					reItems.add(i + 1, new ReItem('.', false));
-					i++;
-				}
-				if (reItems.get(i).equals(new ReItem(')', false))
-						&& reItems.get(i + 1).equals(new ReItem('(', false))) {
-					reItems.add(i + 1, new ReItem('.', false));
-					i++;
-				}
-				if (reItems.get(i).equals(new ReItem('*', false))
-						&& reItems.get(i + 1).equals(new ReItem('(', false))) {
-					reItems.add(i + 1, new ReItem('.', false));
-					i++;
-				}
-				if (reItems.get(i).equals(new ReItem(')', false))
-						&& reItems.get(i + 1).isChar()) {
-					reItems.add(i + 1, new ReItem('.', false));
-					i++;
-				}
-				if (reItems.get(i).equals(new ReItem('*', false))
-						&& reItems.get(i + 1).isChar()) {
-					reItems.add(i + 1, new ReItem('.', false));
-					i++;
-				}
-			}
-		} catch (Exception e) { // 不可能出错
+		for(int i = 0; i < symbolTable.size();i++) {
+			System.out.println(i + " - " + symbolTable.get(i));
 		}
-
-		// for (int i = 0; i < reItems.size(); i++) {
-		// System.out.println(reItems.get(i));
-		// }
-		return reItems;
+		
 	}
-
-	public static ArrayList<ReItem> infixToPostfix(ArrayList<ReItem> reItems) {
-		ArrayList<ReItem> postReItems = new ArrayList<ReItem>();
-		Stack<ReItem> stack = new Stack<ReItem>();
-		for (ReItem r : reItems) {
-			if (r.isChar()) {
-				postReItems.add(r);
-			} else if (r.equals(ReItem.getReElement('('))) {
-				stack.push(r);
-			} else if (r.equals(ReItem.getReElement(')'))) {
-				if (stack.isEmpty()) {
-					System.err.println("ERROR ()");
-					System.exit(-1);
-				} else {
-					while (!stack.peek().equals(ReItem.getReElement('('))) {
-						postReItems.add(stack.pop());
+	static String returnMsg = "";
+	static String output = "";
+	static int confirmedIndex = 0;
+	static ArrayList<String> symbolTable = new ArrayList<String>();
+	static ArrayList<String> tokenTable = new ArrayList<String>();
+	
+	private static void scan(char[] srcArr, int start) {
+		int state = start;
+		int point = 0;
+		while (point < srcArr.length) {
+			Integer tmp = go(state, srcArr[point]);
+			if(tmp == null) {
+				if(state == 0) {
+					System.out.println("ERROR WORDS");
+					return;
+				}
+				String word = output.substring(0,output.length()-(point-confirmedIndex)+1);
+				if(returnMsg.equals("ID")) {
+					if(!symbolTable.contains(word)) {
+						symbolTable.add(word);
 					}
-					stack.pop(); // 弹出括号
+					tokenTable.add("TOKEN (" + word + "," + returnMsg + "," + symbolTable.indexOf(word) + ")");
+				} else {
+					if(!word.equals(" ")) {
+						tokenTable.add("TOKEN (" + word.trim() + "," + returnMsg + ")");
+					} else if(tokenTable.size() > 0 && !tokenTable.get(tokenTable.size()-1).equals("TOKEN ( ,BLANK)")) {
+						tokenTable.add("TOKEN (" + word + "," + returnMsg + ")");
+					} else if(tokenTable.size() == 0) {
+						tokenTable.add("TOKEN ( ,BLANK)");
+					}
 				}
+				state = start;
+				output = "";
+				point = ++confirmedIndex;
 			} else {
-				while (!stack.isEmpty()
-						&& !stack.peek().equals(ReItem.getReElement('('))
-						&& stack.peek().getPriority() >= r.getPriority()) {
-					postReItems.add(stack.pop());
-
+				output += srcArr[point];
+				state = tmp;
+				if(SearchTable.returnTable.containsKey(state)) {
+					returnMsg = SearchTable.returnTable.get(state).message;
+					confirmedIndex = point;
 				}
-				stack.push(r);
+				point++;
 			}
 		}
-		while (!stack.isEmpty()) {
-
-			if (!stack.peek().equals(ReItem.getReElement('('))) {
-				postReItems.add(stack.pop());
+		if(state != start) {
+			String word = output.substring(0,output.length()-(point-confirmedIndex)+1);
+			if(returnMsg.equals("ID")) {
+				if(!symbolTable.contains(word)) {
+					symbolTable.add(word);
+				}
+				tokenTable.add("TOKEN (" + word + "," + returnMsg + "," + symbolTable.indexOf(word) + ")");
 			} else {
-				System.err.println("ERROR ()");
-				System.exit(-1);
+				if(!word.equals(" ")) {
+					tokenTable.add("TOKEN (" + word.trim() + "," + returnMsg + ")");
+				} else if(tokenTable.size() > 0 && !tokenTable.get(tokenTable.size()-1).equals("TOKEN ( ,BLANK)")) {
+					tokenTable.add("TOKEN (" + word + "," + returnMsg + ")");
+				}
+			}
+			state = start;
+		}
+	}
+	
+	private static Integer go(int state, char c) {
+		return SearchTable.table.get(state).get(c);
+	}
+
+	private static char[] preprocess(char[] srcArr) {
+		for (int i = 0; i < srcArr.length; i++) {
+			if (srcArr[i] == '\t') {
+				srcArr[i] = ' ';
+			}
+			if (srcArr[i] == '\n') {
+				srcArr[i] = ' ';
 			}
 		}
-		for (int i = 0; i < postReItems.size(); i++) {
-			System.out.println(postReItems.get(i));
-		}
-		return postReItems;
+		return srcArr;
 	}
 }

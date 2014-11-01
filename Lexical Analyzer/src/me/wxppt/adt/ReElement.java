@@ -2,14 +2,14 @@ package me.wxppt.adt;
 
 import me.wxppt.constant.Const;
 
-public class ReItem {
+public class ReElement {
 
 	private char c;
 	private boolean isEscape = false;
 	private boolean isEmpty = false;
 	private int priority = 0;
 
-	public ReItem(char c, boolean isEscape) throws Exception {
+	public ReElement(char c, boolean isEscape) throws Exception {
 		this.c = c;
 		this.isEscape = isEscape;
 		// 检查转义字符的合法性
@@ -41,6 +41,9 @@ public class ReItem {
 	}
 
 	public boolean isChar() {
+		if(isEscape) {
+			return true;
+		}
 		for (int i = 0; i < Const.RE_ELEMENTS.length; i++) {
 			if (c == Const.RE_ELEMENTS[i]) {
 				return false;
@@ -91,19 +94,23 @@ public class ReItem {
 		return (c + " " + isEscape).equals(obj.toString());
 	}
 
-	public static ReItem getReElement(char ele) {
+	public static ReElement getReElement(char ele) {
 		try {
-			return new ReItem(ele,false);
+			return new ReElement(ele,false);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return null;
 	}
 	
-	public static ReItem getEmptyElement() {
-		ReItem nitem = null;
+	public boolean match(char charactor) {
+		return c == charactor;
+	}
+	
+	public static ReElement getEmptyElement() {
+		ReElement nitem = null;
 		try {
-			nitem = new ReItem(' ',false);
+			nitem = new ReElement(' ',false);
 			nitem.setEmpty(true);
 		} catch (Exception e) {
 			e.printStackTrace();

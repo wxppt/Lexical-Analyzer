@@ -1,5 +1,6 @@
 package me.wxppt;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import me.wxppt.adt.DfaState;
@@ -8,15 +9,16 @@ import me.wxppt.adt.ReElement;
 import me.wxppt.adt.Regular;
 import me.wxppt.adt.SearchTable;
 import me.wxppt.adt.StateProperty;
+import me.wxppt.logic.AnalysiserLogic;
 import me.wxppt.logic.DfaLogic;
-import me.wxppt.logic.IOLogic;
+import me.wxppt.logic.FileLogic;
 import me.wxppt.logic.NfaLogic;
 import me.wxppt.logic.ReLogic;
 
 public class Launcher {
 	public static void main(String[] args) {
 		ReLogic reLogic = new ReLogic();
-		ArrayList<Regular> res = reLogic.readRe("java.re");
+		ArrayList<Regular> res = reLogic.readRe("Regular.re");
 		System.out.println("---------------");
 		NfaState start = new NfaState();
 		start.property = StateProperty.START;
@@ -37,94 +39,29 @@ public class Launcher {
 		dfaLogic.print(dfa);
 		dfaLogic.constructSearchTable(dfa);
 		System.out.println("---------------");
-		IOLogic ioLogic = new IOLogic();
-		String sourceCode = ioLogic.fileInput("SourceCode.java");
-		char[] srcArr = sourceCode.toCharArray();
-		srcArr = preprocess(srcArr);
-		scan(srcArr, 0);
-		for(int i = 0; i < tokenTable.size();i++) {
-			System.out.println(tokenTable.get(i));
+		FileLogic fileLogic = new FileLogic();
+		char[] srcArr = fileLogic.fileInput("SourceCode");
+		AnalysiserLogic anaLogic = new AnalysiserLogic();
+		anaLogic.scan(srcArr, 0);
+		String symbolContent = "";
+		String tokenContent = "";
+		for (int i = 0; i < anaLogic.getTokenTable().size(); i++) {
+			System.out.println(anaLogic.getTokenTable().get(i));
+			tokenContent += anaLogic.getTokenTable().get(i) + "\r\n";
 		}
-		for(int i = 0; i < symbolTable.size();i++) {
-			System.out.println(i + " - " + symbolTable.get(i));
+		for (int i = 0; i < anaLogic.getSymbolTable().size(); i++) {
+			System.out.println(i + " - " + anaLogic.getSymbolTable().get(i));
+			symbolContent += i + " - " + anaLogic.getSymbolTable().get(i) + "\r\n";
 		}
-		
-	}
-	static String returnMsg = "";
-	static String output = "";
-	static int confirmedIndex = 0;
-	static ArrayList<String> symbolTable = new ArrayList<String>();
-	static ArrayList<String> tokenTable = new ArrayList<String>();
-	
-	private static void scan(char[] srcArr, int start) {
-		int state = start;
-		int point = 0;
-		while (point < srcArr.length) {
-			Integer tmp = go(state, srcArr[point]);
-			if(tmp == null) {
-				if(state == 0) {
-					System.out.println("ERROR WORDS");
-					return;
-				}
-				String word = output.substring(0,output.length()-(point-confirmedIndex)+1);
-				if(returnMsg.equals("ID")) {
-					if(!symbolTable.contains(word)) {
-						symbolTable.add(word);
-					}
-					tokenTable.add("TOKEN (" + word + "," + returnMsg + "," + symbolTable.indexOf(word) + ")");
-				} else {
-					if(!word.equals(" ")) {
-						tokenTable.add("TOKEN (" + word.trim() + "," + returnMsg + ")");
-					} else if(tokenTable.size() > 0 && !tokenTable.get(tokenTable.size()-1).equals("TOKEN ( ,BLANK)")) {
-						tokenTable.add("TOKEN (" + word + "," + returnMsg + ")");
-					} else if(tokenTable.size() == 0) {
-						tokenTable.add("TOKEN ( ,BLANK)");
-					}
-				}
-				state = start;
-				output = "";
-				point = ++confirmedIndex;
-			} else {
-				output += srcArr[point];
-				state = tmp;
-				if(SearchTable.returnTable.containsKey(state)) {
-					returnMsg = SearchTable.returnTable.get(state).message;
-					confirmedIndex = point;
-				}
-				point++;
-			}
+		try {
+			fileLogic.saveFile("Token.txt", tokenContent);
+			fileLogic.saveFile("Symbol.txt", symbolContent);
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-		if(state != start) {
-			String word = output.substring(0,output.length()-(point-confirmedIndex)+1);
-			if(returnMsg.equals("ID")) {
-				if(!symbolTable.contains(word)) {
-					symbolTable.add(word);
-				}
-				tokenTable.add("TOKEN (" + word + "," + returnMsg + "," + symbolTable.indexOf(word) + ")");
-			} else {
-				if(!word.equals(" ")) {
-					tokenTable.add("TOKEN (" + word.trim() + "," + returnMsg + ")");
-				} else if(tokenTable.size() > 0 && !tokenTable.get(tokenTable.size()-1).equals("TOKEN ( ,BLANK)")) {
-					tokenTable.add("TOKEN (" + word + "," + returnMsg + ")");
-				}
-			}
-			state = start;
-		}
-	}
-	
-	private static Integer go(int state, char c) {
-		return SearchTable.table.get(state).get(c);
 	}
 
-	private static char[] preprocess(char[] srcArr) {
-		for (int i = 0; i < srcArr.length; i++) {
-			if (srcArr[i] == '\t') {
-				srcArr[i] = ' ';
-			}
-			if (srcArr[i] == '\n') {
-				srcArr[i] = ' ';
-			}
-		}
-		return srcArr;
-	}
+	
+
+	
 }

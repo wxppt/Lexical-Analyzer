@@ -46,9 +46,10 @@ public class ReLogic {
 		
 		for(String line :content) {
 			Regular re = new Regular();
-			String[] sp = line.split("======");
-			re.type = sp[0].split(":")[0];
-			re.priority = Integer.parseInt(sp[0].split(":")[1]);
+			String[] sp = line.split("______");
+//			re.type = sp[0].split(":")[0];
+//			re.priority = Integer.parseInt(sp[0].split(":")[1]);
+			re.type = sp[0];
 			re.regular = sp[1];
 			System.out.println(re);
 			res.add(re);

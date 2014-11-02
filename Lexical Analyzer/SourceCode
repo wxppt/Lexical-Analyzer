@@ -1,0 +1,53 @@
+package me.wxppt.adt;
+
+import java.util.ArrayList;
+
+public class DfaState {
+	public static int STATE_INDEX = 0;
+
+	public int no;
+
+	public StateProperty property;
+	public ReElement[] edge = new ReElement[100];
+	public DfaState[] next = new DfaState[100];
+	public ArrayList<NfaState> closure = new ArrayList<NfaState>();
+	
+	public String returnMessage = "";
+	public int priority = -1;
+
+	public int edgeCnt = 0;
+	
+	private String testString = "HELLOWORLD";
+	private float testFloat = 1.566;
+	private char testchar = 'a';
+
+	public DfaState() {
+		no = STATE_INDEX;
+		STATE_INDEX++;
+	}
+
+	public boolean equals(Object obj) {
+
+		if (!(obj instanceof DfaState)) {
+			return false;
+		} else {
+			DfaState d = (DfaState) obj;
+			if (edgeCnt != d.edgeCnt || closure.size() != d.closure.size()) {
+				return false;
+			}
+			for (int i = 0; i < edgeCnt; i++) {
+				if (!edge[i].equals(d.edge[i])) {
+					return false;
+				}
+			}
+			for (int i = 0; i < closure.size(); i++) {
+				if (closure.get(i).no != d.closure.get(i).no) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+	}
+
+}

@@ -10,8 +10,8 @@ public class NfaState {
 	public int no;
 
 	public StateProperty property;
-	public ReElement[] edge = new ReElement[50];
-	public NfaState[] next = new NfaState[50];
+	public ReElement[] edge = new ReElement[256];
+	public NfaState[] next = new NfaState[256];
 
 	public int edgeCnt = 0;
 	
